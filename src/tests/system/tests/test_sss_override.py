@@ -361,7 +361,7 @@ def test_sss_override__home_takes_precedence_over_override_homedir(client: Clien
     ), f"sss_override did not take precedence over override_homedir, got: {result.home}"
 
 
-@pytest.mark.importance("high")
+@pytest.mark.importance("medium")
 @pytest.mark.ticket(bz=1919942)
 @pytest.mark.topology([KnownTopology.LDAP, KnownTopology.AD, KnownTopology.Samba])
 @pytest.mark.preferred_topology(KnownTopology.LDAP)
