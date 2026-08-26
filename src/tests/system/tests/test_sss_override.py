@@ -321,7 +321,7 @@ def test_sss_override__export_then_import_override_data(client: Client, provider
     }, "No local override found for 'group1'!"
 
 
-@pytest.mark.importance("high")
+@pytest.mark.importance("medium")
 @pytest.mark.ticket(bz=1919942)
 @pytest.mark.topology([KnownTopology.LDAP, KnownTopology.AD, KnownTopology.Samba])
 @pytest.mark.preferred_topology(KnownTopology.LDAP)
