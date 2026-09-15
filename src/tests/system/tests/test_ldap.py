@@ -942,3 +942,51 @@ def test_ldap__connection_expire_timeout_default_value_is_logged(client: Client,
     assert (
         "Option ldap_connection_expire_timeout has value 900" in log
     ), "Default ldap_connection_expire_timeout value (900) not found in domain log!"
+
+
+@pytest.mark.ticket(bz=954323)
+@pytest.mark.importance("medium")
+@pytest.mark.topology(KnownTopology.LDAP)
+def test_ldap__display_grace_logins_when_password_has_expired(client: Client, ldap: LDAP):
+    """
+    :title: Display grace login
+    :description: A user should be informed about how many grace logins are still
+    available (if there are any), when their password has expired.
+    :setup:
+        1. Set "passwordExp" to "on"
+        2. Set "passwordMaxAge" to "1"
+        3. Set "passwordGraceLimit" to "3"
+        3. Add a user to LDAP
+        4. Wait until the password is expired
+        6. Start SSSD
+    :steps:
+        1. Authenticate as the user1 with password "Secret123"
+        2. Check the corresponding message containing the remaining grace logins in log.
+        3. Repeat steps 1-2 two more times.
+    :expectedresults:
+        1. Authentication should succeed.
+        2. Corresponding log should be generated
+        3. Results above are expected in every iteration.
+    :customerscenario: False
+    """
+    ldap.ldap.modify("cn=config", replace={"passwordExp": "on", "passwordMaxAge": "1", "passwordGraceLimit": "3"})
+    ldap.user("user1").add(password="Secret123")
+    client.sssd.start()
+    time.sleep(2)
+
+    for grace_logins in range(2, -1, -1):
+        # Log version - check with Jakub which one is better
+        rc, _, stdout, _ = client.auth.ssh.password_with_output("user1", "Secret123")
+        assert rc == 0, f"User 'user1' login failed!: Grace logins left: {grace_logins}"
+
+        log = client.fs.read(client.sssd.logs.domain())
+        assert (
+            f"You have {grace_logins} grace login(s) remaining" in log
+        ), "Message about grace logins was not found in log."
+
+        # ---------------------------------------------------------------------------------
+        # Std out version
+        assert rc == 0, f"User 'user1' login failed!: Grace logins left: {grace_logins}"
+        assert (
+            f"You have {grace_logins} grace login(s) remaining" in stdout
+        ), "Message about grace logins was not found in stdout."
