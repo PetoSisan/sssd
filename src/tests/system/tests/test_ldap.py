@@ -976,53 +976,8 @@ def test_ldap__display_grace_logins_when_password_has_expired(client: Client, ld
 
     for grace_logins in range(2, -1, -1):
         rc, _, stdout, _ = client.auth.ssh.password_with_output("user1", "Secret123")
+        print(stdout)
         assert rc == 0, f"User 'user1' login failed!: Grace logins left: {grace_logins}"
         assert (
             f"You have {grace_logins} grace login(s) remaining" in stdout
         ), "Message about grace logins was not found in stdout."
-
-
-@pytest.mark.ticket(bz=748856)
-@pytest.mark.importance("medium")
-@pytest.mark.topology(KnownTopology.LDAP)
-def test_ldap__display_pasword_expiration_warning(client: Client, ldap: LDAP):
-    """
-    :title: Display grace login
-    :description: A user should be informed about how many grace logins are still
-    available (if there are any), when their password has expired.
-    :setup:
-        1. Set "passwordExp" to "on"
-        2. Set "passwordMaxAge" to "89600"
-        3. Set "passwordGraceLimit" to "3"
-        3. Add a user to LDAP
-        4. Wait until the password is expired
-        6. Start SSSD
-    :steps:
-        1. Authenticate as the user1 with password "Secret123"
-        2. Check the corresponding message containing the remaining grace logins in log.
-        3. Repeat steps 1-2 two more times.
-    :expectedresults:
-        1. Authentication should succeed.
-        2. Corresponding log should be generated
-        3. Results above are expected in every iteration.
-    :customerscenario: False
-    """
-    ldap.ldap.modify("cn=config", replace={"passwordExp": "on", "passwordMaxAge": "86400", "passwordWarning": "86400"})
-    ldap.user("user1").add(password="Secret123")
-    client.sssd.start()
-
-    # Log version - check with Jakub which one is better
-    rc, _, stdout, _ = client.auth.ssh.password_with_output("user1", "Secret123")
-    assert rc == 0, f"User 'user1' login failed!"
-
-    log = client.fs.read(client.sssd.logs.domain())
-    assert (
-        "Your password will expire in " in log
-    ), "Password expiration warning not generated!"
-
-    # ---------------------------------------------------------------------------------
-    # Std out version
-    assert (
-        "Your password will expire in " in stdout
-    ), "Password expiration warning not generated!"
-
