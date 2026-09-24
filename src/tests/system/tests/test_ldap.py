@@ -427,10 +427,11 @@ def test_ldap__user_cannot_login_when_no_remaining_grace_logins(
     :customerscenario: False
     """
     ldap.ldap.modify("cn=config", replace={"passwordMaxAge": "1", "passwordGraceLimit": "0"})
-    ldap.user("user1").add(password="Secret123").password_change_at_logon(password="Secret123")
+    ldap.user("user1").add(password="Secret123")
 
     client.sssd.domain["ldap_pwmodify_mode"] = modify_mode
     client.sssd.start()
+    time.sleep(2)
 
     rc, _, _, _ = client.auth.ssh.password_with_output("user1", "Secret123")
     assert rc == expected, err_msg
