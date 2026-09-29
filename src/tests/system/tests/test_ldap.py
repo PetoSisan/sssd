@@ -1055,22 +1055,24 @@ def test_ldap__display_grace_logins_when_password_has_expired(client: Client, ld
         4. Wait until the password is expired
         6. Start SSSD
     :steps:
-        1. Authenticate as the user1 with password "Secret123"
-        2. Check the corresponding message containing the remaining grace logins in log.
-        3. Repeat steps 1-2 two more times.
+        1. Authenticate as the user1 via 'su' with password "Secret123"
+        2. Check the corresponding message containing the remaining grace logins in log
+        3. Repeat steps 1-2 with 'ssh' method
     :expectedresults:
-        1. Authentication should succeed.
+        1. Authentication should succeed
         2. Corresponding log should be generated
-        3. Results above are expected in every iteration.
+        3. Results above are expected in every iteration
     :customerscenario: False
     """
-    ldap.ldap.modify("cn=config", replace={"passwordExp": "on", "passwordMaxAge": "1", "passwordGraceLimit": "3"})
+    ldap.ldap.modify("cn=config", replace={"passwordExp": "on", "passwordMaxAge": "1", "passwordGraceLimit": "2"})
     ldap.user("user1").add(password="Secret123")
     client.sssd.start()
     time.sleep(2)
 
-    for grace_logins in range(2, -1, -1):
-        rc, _, stdout, _ = client.auth.ssh.password_with_output("user1", "Secret123")
+    grace_logins = 2
+    for method in ["su", "ssh"]:
+        rc, _, stdout, _ = client.auth.parametrize(method).password_with_output("user1", "Secret123")
+        grace_logins -= 1
         assert rc == 0, f"User 'user1' login failed!: Grace logins left: {grace_logins}"
         assert (
             f"You have {grace_logins} grace login(s) remaining" in stdout
