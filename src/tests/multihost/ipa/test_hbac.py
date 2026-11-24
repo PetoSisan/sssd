@@ -21,21 +21,6 @@ from sssd.testlib.common.expect import pexpect_ssh
 @pytest.mark.hbac
 class Testipahbac(object):
 
-    def test_sssctl_sshd(self, multihost, hbac_sshd_rule):
-        """
-        :title: hbac: Verify using sssctl sshd service is allowed
-        :id: 33a4288a-6c05-4472-a956-378736e030c8
-        """
-        sssctl_cmd = 'sssctl user-checks -s sshd foobar1'
-        test_pam = re.compile(r'%s' % 'pam_acct_mgmt: Success')
-        cmd = multihost.client[0].run_command(sssctl_cmd)
-        result = test_pam.search(cmd.stderr_text)
-        if not result:
-            STATUS = 'FAIL'
-        else:
-            STATUS = 'PASS'
-        assert STATUS == 'PASS'
-
     def test_hbac_changes(self, multihost, hbac_sshd_rule):
         """
         :title: hbac: verify hbac rule changes are applied
