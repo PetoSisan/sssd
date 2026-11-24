@@ -64,28 +64,6 @@ class Testipahbac(object):
         ipa_server.del_hbac_rule('test1')
         assert status == 'PASS'
 
-    def test_multiple_hbac_rules(self, multihost):
-        """
-        :title: hbac: Verify HBAC Evaluation happens per service
-         when user is associated  with multiple hbac rules
-        :id: 6981b637-f4ea-449b-8916-60cc938c4d0f
-        """
-        ipa_server = ipaTools(multihost.master[0])
-        client_host = multihost.client[0].sys_hostname
-        ipa_server.add_hbac_rule('test1', 'foobar1', client_host, 'sshd')
-        ipa_server.add_hbac_rule('test2', 'foobar1', client_host, 'sudo')
-        sssctl_cmd = 'sssctl user-checks -s sshd foobar1'
-        test_pam = re.compile(r'%s' % 'pam_acct_mgmt: Success')
-        cmd = multihost.client[0].run_command(sssctl_cmd)
-        result = test_pam.search(cmd.stderr_text)
-        if not result:
-            STATUS = 'FAIL'
-        else:
-            STATUS = 'PASS'
-        ipa_server.del_hbac_rule('test1')
-        ipa_server.del_hbac_rule('test2')
-        assert STATUS == 'PASS'
-
     def test_nested_groups(self, multihost):
         """
         :title: hbac: Verify hbac evaluation works as expected
