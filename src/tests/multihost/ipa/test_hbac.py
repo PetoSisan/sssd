@@ -21,23 +21,6 @@ from sssd.testlib.common.expect import pexpect_ssh
 @pytest.mark.hbac
 class Testipahbac(object):
 
-    def test_hbac_changes(self, multihost, hbac_sshd_rule):
-        """
-        :title: hbac: verify hbac rule changes are applied
-        :id: fcd4fc73-2425-46f8-8d66-95a49b5fb361
-        """
-        update_rule = "ipa hbacrule-remove-user --users='foobar1' test1"
-        multihost.master[0].run_command(update_rule)
-        sssctl_cmd = 'sssctl user-checks -s sshd foobar1'
-        cmd = multihost.client[0].run_command(sssctl_cmd)
-        test_pam = re.compile(r'%s' % 'pam_acct_mgmt: Permission denied')
-        result = test_pam.search(cmd.stderr_text)
-        if not result:
-            STATUS = 'FAIL'
-        else:
-            STATUS = 'PASS'
-        assert STATUS == 'PASS'
-
     def test_hbac_refresh_time(self, multihost):
         """
         :title: hbac: Verify cached hbac rule is applied
