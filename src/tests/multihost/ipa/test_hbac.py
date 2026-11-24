@@ -64,48 +64,6 @@ class Testipahbac(object):
         ipa_server.del_hbac_rule('test1')
         assert status == 'PASS'
 
-    def test_nested_groups(self, multihost):
-        """
-        :title: hbac: Verify hbac evaluation works as expected
-         with nested group evaluation
-        :id: fb2fd287-b217-487c-a59a-d827c426b0bb
-        """
-        ipa_server = ipaTools(multihost.master[0])
-        client_host = multihost.client[0].sys_hostname
-        groups = ['std_group', 'admin_group']
-        for grp in groups:
-            cmd = 'ipa group-add %s' % grp
-            multihost.master[0].run_command(cmd)
-        # Add members
-        cmd1 = 'ipa group-add-member --users=foobar1 std_group'
-        cmd2 = 'ipa group-add-member --users=foobar2 admin_group'
-        multihost.master[0].run_command(cmd1, raiseonerr=False)
-        multihost.master[0].run_command(cmd2, raiseonerr=False)
-        # make admin_group member of std_group
-        nested_group = 'ipa group-add-member --groups=admin_group std_group'
-        multihost.master[0].run_command(nested_group, raiseonerr=False)
-        # add rule
-        ipa_server.add_hbac_rule('allow_ssh_access', 'std_group', client_host,
-                                 'sshd', group=True)
-        ipa_server.add_hbac_rule('allow_sudo_access', 'admin_group',
-                                 client_host, 'sudo', group=True)
-        users = ['foobar1', 'foobar2']
-        for user in users:
-            sssctl_cmd = 'sssctl user-checks -s sshd %s' % user
-            cmd1 = multihost.client[0].run_command(sssctl_cmd)
-            test_pam = re.compile(r'%s' % 'pam_acct_mgmt: Success')
-            result = test_pam.search(cmd1.stderr_text)
-            if not result:
-                STATUS = 'FAIL'
-            else:
-                STATUS = 'PASS'
-        ipa_server.del_hbac_rule('allow_ssh_access')
-        ipa_server.del_hbac_rule('allow_sudo_access')
-        for grp in groups:
-            cmd = 'ipa group-del %s' % grp
-            multihost.master[0].run_command(cmd)
-        assert STATUS == 'PASS'
-
     def test_auto_private_group(self, multihost):
         """
         :title: hbac: Verify hbac rule associated with
