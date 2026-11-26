@@ -898,6 +898,51 @@ def test_ipa__hbac_permitted_group_users_can_login(client: Client, ipa: IPA):
     assert client.auth.ssh.password("user2", "Secret123"), "user2 should still have access!"
 
 
+@pytest.mark.importance("medium")
+@pytest.mark.topology(KnownTopology.IPA)
+def test_ipa__hbac_supplementary_group_allows_login_with_auto_private_groups(client: Client, ipa: IPA):
+    """
+    :title: Validate supplementary group HBAC when auto private groups are enabled
+    :description:
+        The allow rule is on a supplementary group. The directory gid differs from the uid,
+        so a matching gid shows that auto_private_groups is in effect.
+    :setup:
+        1. Create user1 with a directory gid that differs from the uid, and user2
+        2. Add user1 to group1
+        3. Disable the default HBAC rule and allow SSH for group1
+        4. Set auto_private_groups to true and restart SSSD
+    :steps:
+        1. Look up user1
+        2. Log in over SSH as user1 and user2
+    :expectedresults:
+        1. user1 gid equals uid
+        2. user1 can log in and user2 cannot
+    :customerscenario: False
+    """
+    user1 = ipa.user("user1").add(uid=222222, gid=333333)
+    ipa.user("user2").add()
+    group1 = ipa.group("group1").add()
+    group1.add_member(user1)
+
+    ipa.hbac("allow_all").disable()
+    ipa.hbac("allow_group_ssh").create(
+        groups="group1",
+        hosts=client.hostnameutils.name,
+        services="sshd",
+    )
+
+    client.sssd.domain["auto_private_groups"] = "true"
+    client.sssd.restart()
+
+    user = client.tools.getent.passwd("user1")
+    assert user is not None, "user1 was not found!"
+    assert user.uid == 222222, "user1 uid is not 222222!"
+    assert user.uid == user.gid, "user1 gid does not equal uid!"
+
+    assert client.auth.ssh.password("user1", "Secret123"), "user1 SSH should succeed!"
+    assert not client.auth.ssh.password("user2", "Secret123"), "user2 SSH should fail!"
+
+
 @pytest.mark.importance("high")
 @pytest.mark.topology(KnownTopology.IPA)
 def test_ipa__hbac_permitted_host_group_members_can_login(client: Client, ipa: IPA):
